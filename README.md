@@ -8,3 +8,9 @@ Aplicación web para el cálculo de fuerzas internas en armaduras 2D.
 - Exportación de resultados en formato CSV.
 
 Desarrollado con Streamlit, NumPy y SciPy.
+streamlit
+numpy
+pandas
+scipy
+openpyxl
+matplotlib
