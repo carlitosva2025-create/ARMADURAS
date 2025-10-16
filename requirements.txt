@@ -4,3 +4,8 @@ pandas
 scipy
 openpyxl
 matplotlib
+streamlit
+numpy
+pandas
+scipy
+matplotlib
