@@ -1,4 +1,4 @@
-# app.py
+# app.py (versión corregida: sin st.experimental_rerun())
 import streamlit as st
 import numpy as np
 import pandas as pd
@@ -28,7 +28,6 @@ def add_node(x, y):
     st.session_state.nodes.append({'x': float(x), 'y': float(y)})
 
 def add_bar(n1, n2, A=0.001, E=210e9):
-    # Basic checks (indices)
     n = len(st.session_state.nodes)
     if n1 < 0 or n1 >= n or n2 < 0 or n2 >= n:
         st.warning("Índices de nodo inválidos al añadir barra.")
@@ -39,21 +38,17 @@ def add_bar(n1, n2, A=0.001, E=210e9):
     st.session_state.bars.append({'n1': int(n1), 'n2': int(n2), 'A': float(A), 'E': float(E)})
 
 def remove_node(idx):
-    # remove node and any connected bars; adjust connectivity
     if idx < 0 or idx >= len(st.session_state.nodes):
         return
-    # remove bars that include this node
     new_bars = []
     for b in st.session_state.bars:
         if b['n1'] == idx or b['n2'] == idx:
             continue
-        # fix indices greater than idx
         b2 = {'n1': b['n1'], 'n2': b['n2'], 'A': b['A'], 'E': b['E']}
         if b2['n1'] > idx: b2['n1'] -= 1
         if b2['n2'] > idx: b2['n2'] -= 1
         new_bars.append(b2)
     st.session_state.bars = new_bars
-    # remove loads/supports referencing node
     st.session_state.nodes.pop(idx)
     st.session_state.loads = { (k if k<idx else k-1):v for k,v in st.session_state.loads.items() if k!=idx }
     st.session_state.supports = { (k if k<idx else k-1):v for k,v in st.session_state.supports.items() if k!=idx }
@@ -171,7 +166,7 @@ with st.sidebar.expander("Modelo rápido (ejemplo)"):
         set_support(0, True, True)
         set_support(1, False, True)
         set_load(2, 0.0, -1000.0)
-        st.experimental_rerun()
+        st.info("Ejemplo cargado: Triángulo simple. Revisa la vista y pulsa 'Resolver armadura'.")
 
 st.sidebar.markdown("---")
 st.sidebar.subheader("Añadir nodo (manual)")
@@ -182,7 +177,7 @@ with coly:
     new_y = st.number_input("Y (m)", value=0.0, key="add_y")
 if st.sidebar.button("➕ Agregar nodo"):
     add_node(new_x, new_y)
-    st.experimental_rerun()
+    st.success("Nodo agregado. Revisa la tabla y/o la vista.")
 
 st.sidebar.markdown("---")
 st.sidebar.subheader("Añadir barra")
@@ -194,7 +189,7 @@ if len(st.session_state.nodes) >= 2:
     E_input = st.sidebar.number_input("E (Pa)", value=210e9, format="%.1f", step=1.0)
     if st.sidebar.button("➕ Agregar barra"):
         add_bar(sel_n1, sel_n2, A=A_input, E=E_input)
-        st.experimental_rerun()
+        st.success("Barra agregada. Revisa la tabla y/o la vista.")
 else:
     st.sidebar.info("Crea al menos 2 nodos para añadir barras")
 
@@ -206,7 +201,7 @@ if st.sidebar.button("Limpiar todo"):
     st.session_state.loads = {}
     st.session_state.supports = {}
     st.session_state.last_solution = None
-    st.experimental_rerun()
+    st.success("Modelo limpiado.")
 
 # -------------------------
 # Main area: model table + plot + editor
@@ -215,7 +210,6 @@ col_model, col_plot = st.columns([1, 2])
 
 with col_model:
     st.subheader("Nodos")
-    # show nodes table with remove button per row
     if len(st.session_state.nodes) == 0:
         st.info("No hay nodos (usa la barra lateral para agregar).")
     else:
@@ -224,7 +218,7 @@ with col_model:
         remove_idx = st.number_input("Eliminar nodo (index)", min_value=0, max_value=max(0,len(st.session_state.nodes)-1), value=0)
         if st.button("🗑️ Eliminar nodo seleccionado"):
             remove_node(remove_idx)
-            st.experimental_rerun()
+            st.success("Nodo eliminado.")
 
     st.markdown("---")
     st.subheader("Barras")
@@ -236,25 +230,24 @@ with col_model:
         remove_bar_idx = st.number_input("Eliminar barra (index)", min_value=0, max_value=max(0,len(st.session_state.bars)-1), value=0)
         if st.button("🗑️ Eliminar barra seleccionada"):
             remove_bar(remove_bar_idx)
-            st.experimental_rerun()
+            st.success("Barra eliminada.")
 
     st.markdown("---")
     st.subheader("Seleccionar nodo / editar cargas y apoyos")
     if len(st.session_state.nodes) > 0:
         n_idx = st.number_input("Nodo index para editar", min_value=0, max_value=len(st.session_state.nodes)-1, value=0, key="edit_node_idx")
-        # show coords
         ndata = st.session_state.nodes[n_idx]
         st.write(f"N{n_idx} — x={ndata['x']:.3f} m, y={ndata['y']:.3f} m")
         ux = st.checkbox("Restringir Ux (Ux = 0)", value= st.session_state.supports.get(n_idx, (False,False))[0], key="ux_chk")
         uy = st.checkbox("Restringir Uy (Uy = 0)", value= st.session_state.supports.get(n_idx, (False,False))[1], key="uy_chk")
         if st.button("Aplicar apoyos a nodo"):
             set_support(n_idx, ux, uy)
-            st.experimental_rerun()
+            st.success("Apoyos actualizados.")
         px = st.number_input("Px (N)", value=st.session_state.loads.get(n_idx, (0.0,0.0))[0], key="px_in")
         py = st.number_input("Py (N)", value=st.session_state.loads.get(n_idx, (0.0,0.0))[1], key="py_in")
         if st.button("Aplicar carga al nodo"):
             set_load(n_idx, px, py)
-            st.experimental_rerun()
+            st.success("Carga aplicada.")
     else:
         st.info("Agrega nodos para editar.")
 
@@ -262,14 +255,12 @@ with col_plot:
     st.subheader("Visualización de la armadura")
     import matplotlib.pyplot as plt
     fig, ax = plt.subplots(figsize=(6,6))
-    # draw bars
     for i, b in enumerate(st.session_state.bars):
         n1 = st.session_state.nodes[b['n1']]; n2 = st.session_state.nodes[b['n2']]
         xs = [n1['x'], n2['x']]; ys = [n1['y'], n2['y']]
         ax.plot(xs, ys, '-o', color='tab:blue')
         mx, my = (xs[0]+xs[1])/2, (ys[0]+ys[1])/2
         ax.text(mx, my, f"B{i}", color='blue')
-    # draw nodes with labels & supports/loads
     for i, n in enumerate(st.session_state.nodes):
         ax.plot(n['x'], n['y'], 'ko')
         ax.text(n['x']+0.02, n['y']+0.02, f"N{i}")
@@ -311,10 +302,8 @@ with col2:
         if sol is None:
             st.warning("Primero debes resolver para generar resultados.")
         else:
-            # prepare CSVs in memory
             df_nodes = pd.DataFrame(sol['U']).merge(pd.DataFrame(sol['R']), on='node')
             df_bars = pd.DataFrame(sol['bars'])
-            # create zip-like in memory (multiple files)
             csv1 = df_nodes.to_csv(index=False).encode('utf-8')
             csv2 = df_bars.to_csv(index=False).encode('utf-8')
             st.download_button("Descargar nodos (CSV)", csv1, "nodes_results.csv", "text/csv")
